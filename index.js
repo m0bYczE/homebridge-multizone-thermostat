@@ -8,8 +8,8 @@ gpio.setMode(gpio.MODE_BCM);
 
 var OFF = false;
 var ON = true;
-var RELAY_ON = OFF;
-var RELAY_OFF = ON;
+var RELAY_ON = ON;
+var RELAY_OFF = OFF;
 
 var platform, Accessory, Service, Characteristic, UUIDGen, zones, furnaceLog, sensorLog;
 
