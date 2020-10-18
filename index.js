@@ -80,9 +80,9 @@ function MultiZonePlatform(log, config, api) {
 }
 MultiZonePlatform.prototype.setupGPIO=function() {
   for (var pin in platform.relayPins) {
-    gpio.open(pin, 'output', function() {
-      gpio.write(pin, 1, function() {
-        gpio.close(pin);
+    gpio.open(Number(pin), 'output', function() {
+      gpio.write(Number(pin), 1, function() {
+        gpio.close(Number(pin));
       });
     });
   }
