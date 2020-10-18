@@ -133,6 +133,7 @@ MultiZonePlatform.prototype.writeGPIO=function(pin ,val){
 
 MultiZonePlatform.prototype.updateGPIO=function(zone, HeatCoolMode ,val){
   try{
+    platform.log("updateGPIO");
     if(HeatCoolMode==Characteristic.CurrentHeatingCoolingState.OFF){
       if(platform.zones[zone].relayPinTopeni)platform.writeGPIO(platform.zones[zone].relayPinTopeni,RELAY_OFF);
 
