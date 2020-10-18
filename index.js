@@ -16,8 +16,8 @@ var platform, Accessory, Service, Characteristic, UUIDGen, zones, furnaceLog, se
 
 var zones={
   "Přízemí" : {
-      "relayPinTopeni" : 12,
-      "relayPinKotel" : 18,
+      "relayPinTopeni" : 18,
+      "relayPinKotel" : 24,
       "sensors" : {
         "Kuchyň":{
             "source" : "Jablotron",
@@ -25,8 +25,8 @@ var zones={
       }
   },
   "Patro" : {
-      "relayPinTopeni" : 16,
-      "relayPinKotel" : 18,
+      "relayPinTopeni" : 23,
+      "relayPinKotel" : 24,
       "sensors" : {
         "Ložnice":{
             "source" : "Jablotron",
@@ -50,7 +50,7 @@ function MultiZonePlatform(log, config, api) {
   this.accessories = [];
   furnaceLog=[];
   sensorLog=[];
-  this.relayPins = config.relayPins || [25,24,23,22,27,17]
+  this.relayPins = config.relayPins || [18,23,24]
   this.zones = config.zones || zones;
   this.sensorCheckMilliseconds = config.sensorCheckMilliseconds || 60000;
   this.temperatureDisplayUnits = config.temperatureDisplayUnits || 1;
@@ -135,6 +135,7 @@ MultiZonePlatform.prototype.updateGPIO=function(zone, HeatCoolMode ,val){
   try{
     platform.log("updateGPIO", zone);
     if(HeatCoolMode==Characteristic.CurrentHeatingCoolingState.OFF){
+      platform.log("updateGPIO 1");
       if(platform.zones[zone].relayPinTopeni)platform.writeGPIO(platform.zones[zone].relayPinTopeni,RELAY_OFF);
 
       var vypnoutKotel = true;
@@ -157,6 +158,7 @@ MultiZonePlatform.prototype.updateGPIO=function(zone, HeatCoolMode ,val){
         if(platform.zones[zone].relayPinKotel)platform.writeGPIO(platform.zones[zone].relayPinKotel,RELAY_OFF);
       }
     }else if(HeatCoolMode==Characteristic.CurrentHeatingCoolingState.HEAT){
+      platform.log("updateGPIO 2");
       if(platform.zones[zone].relayPinTopeni)platform.writeGPIO(platform.zones[zone].relayPinTopeni,val?RELAY_ON:RELAY_OFF);
       if(!val) {
         var vypnoutKotel = true;
@@ -180,6 +182,7 @@ MultiZonePlatform.prototype.updateGPIO=function(zone, HeatCoolMode ,val){
         }
       }
     }else if(HeatCoolMode==Characteristic.CurrentHeatingCoolingState.COOL){
+      platform.log("updateGPIO 3");
       if(platform.zones[zone].relayPinTopeni)platform.writeGPIO(platform.zones[zone].relayPinTopeni,val?RELAY_ON:RELAY_OFF);
       if(!val) {
         var vypnoutKotel = true;
@@ -227,14 +230,6 @@ MultiZonePlatform.prototype.getStatus=function(simple){
     retval.sensorLog=sensorLog.filter(entry => entry.timestamp ? Date.parse(entry.timestamp)>oldestDate : false);
   }
   return JSON.stringify(retval);
-};
-MultiZonePlatform.prototype.setTemperature=function(zone, HCState, temp){
-  zone=decodeURIComponent(zone);
-  var thermostat=this.getThermostatForZone(zone);
-  platform.log("set zone", zone, platform.systemStateName(HCState), "to", temp);
-  thermostat.setCharacteristic(Characteristic.TargetHeatingCoolingState,HCState);
-  thermostat.setCharacteristic(Characteristic.TargetTemperature,temp);
-  platform.updateSystem();
 };
 MultiZonePlatform.prototype.startSensorLoops=function(){
   this.sensorInterval=setInterval(
