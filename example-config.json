@@ -19,59 +19,26 @@
 			"minOnOffTime": 300000,
 			"startDelay": 10000,
 			"serverPort": 3000,
-			"serialPort": "/dev/serial0",
-			"serialCfg": {
-				"baudRate": 9600
-			},
-			"relayPins": [25,24,23,22,27,17],
+			"relayPins": [12,16,18],
 			"zones": {
-				"1": {
-					"relayPinHeat": 1,
-					"sensors": {
-						"AE": {
-							"location": "snug",
-							"source": "serial",
-							"extras": "batt"
-						},
-						"AF": {
-							"location": "living",
-							"source": "serial",
-							"extras": "batt"
-						}
+				"Přízemí" : {
+				      "relayPinTopeni" : 12,
+				      "relayPinKotel" : 18,
+				      "sensors" : {
+					"Kuchyň":{
+					    "source" : "Jablotron",
 					}
-				},
-				"2": {
-					"relayPinHeat": 2,
-					"relayPinCool": 4,
-					"relayPinFan": 5,
-					"sensors": {
-						"AA": {
-							"location": "master",
-							"source": "serial",
-							"extras": "batt"
-						},
-						"AB": {
-							"location": "tess",
-							"source": "serial",
-							"extras": "batt"
-						},
-						"AC": {
-							"location": "kate",
-							"source": "serial",
-							"extras": "batt"
-						}
+				      }
+				  },
+				  "Patro" : {
+				      "relayPinTopeni" : 16,
+				      "relayPinKotel" : 18,
+				      "sensors" : {
+					"Ložnice":{
+					    "source" : "Jablotron",
 					}
-				},
-				"3": {
-					"relayPinHeat": 3,
-					"sensors": {
-						"AH": {
-							"location": "addition",
-							"source": "serial",
-							"extras": "batt"
-						}
-					}
-				}
+				      }
+				  }
 			}
 		}
 	]
