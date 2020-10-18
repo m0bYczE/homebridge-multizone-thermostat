@@ -1,13 +1,13 @@
 'use strict';
 var http = require('http');
-var gpio = require('onoff').Gpio;
+var gpio = require('pi-gpio');
 var fs = require('fs');
 var path = require('path');
 
 var OFF = false;
 var ON = true;
-var RELAY_ON = 1;
-var RELAY_OFF = 0;
+var RELAY_ON = 0;
+var RELAY_OFF = 1;
 
 var platform, Accessory, Service, Characteristic, UUIDGen, zones;
 
@@ -62,8 +62,6 @@ function MultiZonePlatform(log, config, api) {
     {"units":"celsius", "low":10, "high":40 },
     {"units":"fahrenheit", "low":50, "high":104 }
   ];
-  this.setupGPIO();
-  this.allRelaysOff();
   if (api) {
       this.api = api;
       this.api.on('didFinishLaunching', function() {
@@ -76,21 +74,6 @@ function MultiZonePlatform(log, config, api) {
     platform.startControlLoop();
   }
 }
-MultiZonePlatform.prototype.allRelaysOff = function() {
-  platform.log("All relays off!");
-  platform.relays.forEach(relay => relay.writeSync(0));
-};
-MultiZonePlatform.prototype.setupGPIO=function() {
-  try{
-      for (var pin in platform.relayPins) {
-        platform.log("setup pin", platform.relayPins[Number(pin)], "for relay", Number(pin)+1);
-        platform.relays[pin] = new gpio(platform.relayPins[Number(pin)], 'out');
-      }
-  }
-  catch (err) {
-    platform.log('error ln207', JSON.stringify(err));
-  }
-};
 MultiZonePlatform.prototype.sendSNSMessage=function(message){
   var AWS = require('aws-sdk'); 
   AWS.config.update({region: 'us-east-1'}); 
@@ -107,7 +90,12 @@ MultiZonePlatform.prototype.sendSNSMessage=function(message){
 };
 
 MultiZonePlatform.prototype.writeGPIO=function(pin ,val){
-  platform.relays[pin].writeSync(val);
+  gpio.open(pin, 'output', function() {
+    gpio.write(pin, val, function() {
+      gpio.close(pin);
+    });
+  });
+
 };
 
 MultiZonePlatform.prototype.checkKotel=function(zone){
