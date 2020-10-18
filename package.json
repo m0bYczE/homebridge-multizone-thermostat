@@ -20,7 +20,7 @@
     "raspberry-pi",
     "homebridge"
   ],
-  "author": "m0bYczE <martin@netcom.cz> (http://github.com/m0bYczE)",
+  "author": "m0bYczE <martin.gruza@gmail.com> (http://github.com/m0bYczE)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/m0bYczE/homebridge-thermo/issues"
