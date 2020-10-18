@@ -47,7 +47,7 @@ function MultiZonePlatform(log, config, api) {
   this.config = config;
   this.accessories = [];
   this.relays = [];
-  this.relayPins = config.relayPins || [18,23,24]
+  this.relayPins = config.relayPins || [12,16,18]
   this.zones = config.zones || zones;
   this.sensorCheckMilliseconds = config.sensorCheckMilliseconds || 60000;
   this.temperatureDisplayUnits = config.temperatureDisplayUnits || 1;
@@ -62,6 +62,7 @@ function MultiZonePlatform(log, config, api) {
     {"units":"celsius", "low":10, "high":40 },
     {"units":"fahrenheit", "low":50, "high":104 }
   ];
+  this.setupGPIO();
   if (api) {
       this.api = api;
       this.api.on('didFinishLaunching', function() {
@@ -69,11 +70,23 @@ function MultiZonePlatform(log, config, api) {
         platform.startSensorLoops();
         platform.startControlLoop();      
       }.bind(this));
+      this.api.on('shutdown', function() {
+        this.setupGPIO();
+      }.bind(this));
   }else{
     platform.startSensorLoops();
     platform.startControlLoop();
   }
 }
+MultiZonePlatform.prototype.setupGPIO=function() {
+  for (var pin in platform.relayPins) {
+    gpio.open(pin, 'output', function() {
+      gpio.write(pin, 1, function() {
+        gpio.close(pin);
+      });
+    });
+  }
+};
 MultiZonePlatform.prototype.sendSNSMessage=function(message){
   var AWS = require('aws-sdk'); 
   AWS.config.update({region: 'us-east-1'}); 
@@ -95,7 +108,6 @@ MultiZonePlatform.prototype.writeGPIO=function(pin ,val){
       gpio.close(pin);
     });
   });
-
 };
 
 MultiZonePlatform.prototype.checkKotel=function(zone){
