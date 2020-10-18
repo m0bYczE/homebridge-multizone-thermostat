@@ -1,10 +1,8 @@
 'use strict';
 var http = require('http');
-var gpio = require('rpi-gpio');
+var gpio = require('onoff').Gpio;
 var fs = require('fs');
 var path = require('path');
-
-gpio.setMode(gpio.MODE_BCM);
 
 var OFF = false;
 var ON = true;
@@ -48,6 +46,7 @@ function MultiZonePlatform(log, config, api) {
   this.log = log;
   this.config = config;
   this.accessories = [];
+  this.relays = [];
   this.relayPins = config.relayPins || [18,23,24]
   this.zones = config.zones || zones;
   this.sensorCheckMilliseconds = config.sensorCheckMilliseconds || 60000;
@@ -76,11 +75,14 @@ function MultiZonePlatform(log, config, api) {
     platform.startControlLoop();
   }
 }
+MultiZonePlatform.prototype.allRelaysOff = function() {
+  platform.relays.forEach(relay => relay.writeSync(0));
+};
 MultiZonePlatform.prototype.setupGPIO=function() {
   try{
       for (var pin in platform.relayPins) {
         platform.log("setup pin", platform.relayPins[Number(pin)], "for relay", Number(pin)+1);
-        gpio.setup(platform.relayPins[Number(pin)], gpio.DIR_OUT);
+        platform.relays[Number(pin)] = new gpio(platform.relayPins[Number(pin)], 'out');
       }
   }
   catch (err) {
@@ -103,7 +105,7 @@ MultiZonePlatform.prototype.sendSNSMessage=function(message){
 };
 
 MultiZonePlatform.prototype.writeGPIO=function(pin ,val){
-  gpio.write(platform.relayPins[ Number(pin) - 1 ],val);
+  platform.relays[Number(pin)].writeSync(val);
 };
 
 MultiZonePlatform.prototype.checkKotel=function(zone){
