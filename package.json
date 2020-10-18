@@ -1,14 +1,14 @@
 {
-  "name": "homebridge-multizone-thermostat",
-  "version": "5.2.0",
-  "description": "A homebridge platform that adds multiple zone thermostats",
+  "name": "homebridge-thermo",
+  "version": "1.0",
+  "description": "A homebridge platform that adds thermostats",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mcmspark/homebridge-multizone-thermostat.git"
+    "url": "git+https://github.com/m0bYczE/homebridge-thermo.git"
   },
   "engines": {
     "homebridge": ">=0.4.33",
@@ -20,10 +20,10 @@
     "raspberry-pi",
     "homebridge"
   ],
-  "author": "mcmspark <mcmspark@hotmail.com> (http://github.com/mcmspark)",
+  "author": "m0bYczE <martin@netcom.cz> (http://github.com/m0bYczE)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mcmspark/homebridge-multizone-thermostat/issues"
+    "url": "https://github.com/m0bYczE/homebridge-thermo/issues"
   },
-  "homepage": "https://github.com/mcmspark/homebridge-multizone-thermostat#readme"
+  "homepage": "https://github.com/m0bYczE/homebridge-thermo#readme"
 }
