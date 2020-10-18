@@ -6,8 +6,8 @@ var path = require('path');
 
 var OFF = false;
 var ON = true;
-var RELAY_ON = ON;
-var RELAY_OFF = OFF;
+var RELAY_ON = 1;
+var RELAY_OFF = 0;
 
 var platform, Accessory, Service, Characteristic, UUIDGen, zones;
 
@@ -63,6 +63,7 @@ function MultiZonePlatform(log, config, api) {
     {"units":"fahrenheit", "low":50, "high":104 }
   ];
   this.setupGPIO();
+  this.allRelaysOff();
   if (api) {
       this.api = api;
       this.api.on('didFinishLaunching', function() {
@@ -131,7 +132,6 @@ MultiZonePlatform.prototype.checkKotel=function(zone){
 };
 
 MultiZonePlatform.prototype.updateGPIO=function(zone, HeatCoolMode ,val){
-  try{
     platform.log("updateGPIO", zone);
     if(HeatCoolMode==Characteristic.CurrentHeatingCoolingState.OFF){
       platform.log("updateGPIO 1");
@@ -150,9 +150,6 @@ MultiZonePlatform.prototype.updateGPIO=function(zone, HeatCoolMode ,val){
         platform.checkKotel(zone);
       }
     }
-  }catch(err){
-    platform.log('error ln600',JSON.stringify(err));
-  }
 };
 MultiZonePlatform.prototype.startSensorLoops=function(){
   this.sensorInterval=setInterval(
