@@ -11,7 +11,7 @@ var ON = true;
 var RELAY_ON = ON;
 var RELAY_OFF = OFF;
 
-var platform, Accessory, Service, Characteristic, UUIDGen, zones, furnaceLog, sensorLog;
+var platform, Accessory, Service, Characteristic, UUIDGen, zones;
 
 
 var zones={
@@ -48,8 +48,6 @@ function MultiZonePlatform(log, config, api) {
   this.log = log;
   this.config = config;
   this.accessories = [];
-  furnaceLog=[];
-  sensorLog=[];
   this.relayPins = config.relayPins || [18,23,24]
   this.zones = config.zones || zones;
   this.sensorCheckMilliseconds = config.sensorCheckMilliseconds || 60000;
@@ -66,7 +64,6 @@ function MultiZonePlatform(log, config, api) {
     {"units":"fahrenheit", "low":50, "high":104 }
   ];
   this.setupGPIO();
-  this.startup();
   if (api) {
       this.api = api;
       this.api.on('didFinishLaunching', function() {
@@ -74,33 +71,11 @@ function MultiZonePlatform(log, config, api) {
         platform.startSensorLoops();
         platform.startControlLoop();      
       }.bind(this));
-      this.api.on('shutdown', function() {
-        platform.shutdown();     
-      }.bind(this));
   }else{
     platform.startSensorLoops();
     platform.startControlLoop();
   }
 }
-MultiZonePlatform.prototype.startup=function(){
-  var status={};
-  try{
-    platform.log("startup");
-    var filePath="status.json";
-    status=JSON.parse(fs.readFileSync(filePath));
-    platform.log(filePath, status.furnaceLog.length);
-  }catch(err){
-    platform.log("cannot load status.json");
-  }
-  furnaceLog=status.furnaceLog || [];
-  sensorLog=status.sensorLog || [];
-};
-MultiZonePlatform.prototype.shutdown=function(){
-  var status=this.getStatus();
-  platform.log("shutdown");
-  var filePath="status.json";
-  fs.writeFileSync(filePath,status);
-};
 MultiZonePlatform.prototype.setupGPIO=function() {
   try{
       for (var pin in platform.relayPins) {
@@ -131,105 +106,51 @@ MultiZonePlatform.prototype.writeGPIO=function(pin ,val){
   gpio.write(platform.relayPins[ Number(pin) - 1 ],val);
 };
 
+MultiZonePlatform.prototype.checkKotel=function(zone){
+  var vypnoutKotel = true;
+
+  for(var zoneV in platform.zones) {
+    if(zoneV == zone) {
+      continue;
+    }
+    var service = platform.getThermostatForZone(zoneV);
+    if(service){
+      var currentState = service.getCharacteristic(Characteristic.CurrentHeatingCoolingState).value;
+      
+      if (currentState === Characteristic.CurrentHeatingCoolingState.HEAT || currentState === Characteristic.CurrentHeatingCoolingState.COOL) {
+        vypnoutKotel = false;
+      } 
+    }
+  }
+
+  if(vypnoutKotel) {
+    if(platform.zones[zone].relayPinKotel)platform.writeGPIO(platform.zones[zone].relayPinKotel,RELAY_OFF);
+  }
+};
+
 MultiZonePlatform.prototype.updateGPIO=function(zone, HeatCoolMode ,val){
   try{
     platform.log("updateGPIO", zone);
     if(HeatCoolMode==Characteristic.CurrentHeatingCoolingState.OFF){
       platform.log("updateGPIO 1");
       if(platform.zones[zone].relayPinTopeni)platform.writeGPIO(platform.zones[zone].relayPinTopeni,RELAY_OFF);
-
-      var vypnoutKotel = true;
-
-      for(var zoneV in platform.zones) {
-        if(zoneV == zone) {
-          continue;
-        }
-        var service = platform.getThermostatForZone(zoneV);
-        if(service){
-          var currentState = service.getCharacteristic(Characteristic.CurrentHeatingCoolingState).value;
-          
-          if (currentState === Characteristic.CurrentHeatingCoolingState.HEAT || currentState === Characteristic.CurrentHeatingCoolingState.COOL) {
-            vypnoutKotel = false;
-          } 
-        }
-      }
-
-      if(vypnoutKotel) {
-        if(platform.zones[zone].relayPinKotel)platform.writeGPIO(platform.zones[zone].relayPinKotel,RELAY_OFF);
-      }
+      platform.checkKotel(zone);
     }else if(HeatCoolMode==Characteristic.CurrentHeatingCoolingState.HEAT){
       platform.log("updateGPIO 2");
       if(platform.zones[zone].relayPinTopeni)platform.writeGPIO(platform.zones[zone].relayPinTopeni,val?RELAY_ON:RELAY_OFF);
       if(!val) {
-        var vypnoutKotel = true;
-
-        for(var zoneV in platform.zones) {
-          if(zoneV == zone) {
-            continue;
-          }
-          var service = platform.getThermostatForZone(zoneV);
-          if(service){
-            var currentState = service.getCharacteristic(Characteristic.CurrentHeatingCoolingState).value;
-            
-            if (currentState === Characteristic.CurrentHeatingCoolingState.HEAT || currentState === Characteristic.CurrentHeatingCoolingState.COOL) {
-              vypnoutKotel = false;
-            } 
-          }
-        }
-
-        if(vypnoutKotel) {
-          if(platform.zones[zone].relayPinKotel)platform.writeGPIO(platform.zones[zone].relayPinKotel,RELAY_OFF);
-        }
+        platform.checkKotel(zone);
       }
     }else if(HeatCoolMode==Characteristic.CurrentHeatingCoolingState.COOL){
       platform.log("updateGPIO 3");
       if(platform.zones[zone].relayPinTopeni)platform.writeGPIO(platform.zones[zone].relayPinTopeni,val?RELAY_ON:RELAY_OFF);
       if(!val) {
-        var vypnoutKotel = true;
-
-        for(var zoneV in platform.zones) {
-          if(zoneV == zone) {
-            continue;
-          }
-          var service = platform.getThermostatForZone(zoneV);
-          if(service){
-            var currentState = service.getCharacteristic(Characteristic.CurrentHeatingCoolingState).value;
-            
-            if (currentState === Characteristic.CurrentHeatingCoolingState.HEAT || currentState === Characteristic.CurrentHeatingCoolingState.COOL) {
-              vypnoutKotel = false;
-            } 
-          }
-        }
-
-        if(vypnoutKotel) {
-          if(platform.zones[zone].relayPinKotel)platform.writeGPIO(platform.zones[zone].relayPinKotel,RELAY_OFF);
-        }
+        platform.checkKotel(zone);
       }
     }
   }catch(err){
     platform.log('error ln600',JSON.stringify(err));
   }
-};
-MultiZonePlatform.prototype.getStatus=function(simple){
-  var retval={};
-  for (var zone in this.zones) {
-    var thermostat=this.getThermostatForZone(zone);
-    if(thermostat){
-      this.zones[zone]['currentTemp'] = thermostat.getCharacteristic(Characteristic.CurrentTemperature).value;
-      this.zones[zone]['setPoint'] = thermostat.getCharacteristic(Characteristic.TargetTemperature).value;
-      this.zones[zone]['running'] = platform.systemStateName( thermostat.getCharacteristic(Characteristic.CurrentHeatingCoolingState).value );
-      this.zones[zone]['HeatingCoolingState']= platform.systemStateName( thermostat.getCharacteristic(Characteristic.TargetHeatingCoolingState).value );
-      this.zones[zone]['temperatureDisplayUnits'] = thermostat.getCharacteristic(Characteristic.TemperatureDisplayUnits).value==Characteristic.TemperatureDisplayUnits.FAHRENHEIT?"F":"C";
-    }
-  }
-  retval.zones=this.zones;
-  retval.timestamp=new Date().toISOString();
-  var oldestDate=new Date(Date.now() - 24 * 3600 * 1000);
-  if(!simple){
-    retval.furnaceLog=furnaceLog.filter(entry => Date.parse(entry.timestamp)>oldestDate);
-    retval.sensorLog=sensorLog.filter(entry => entry.timestamp ? Date.parse(entry.timestamp)>oldestDate : false);
-  }
-  return JSON.stringify(retval);
 };
 MultiZonePlatform.prototype.startSensorLoops=function(){
   this.sensorInterval=setInterval(
@@ -257,7 +178,6 @@ MultiZonePlatform.prototype.updateSensorData = function(deviceid, data){
   var logdata=JSON.parse(JSON.stringify(data));
   logdata.deviceid=deviceid;
   logdata.timestamp=new Date().toISOString();
-  sensorLog.push(logdata);
   var zone = this.getZoneForDevice(deviceid);
   if(!zone){
       return;
@@ -492,9 +412,8 @@ MultiZonePlatform.prototype.shouldTurnOnCooling=function(targetState,currentTemp
 MultiZonePlatform.prototype.turnOnSystem=function(zone, service, systemToTurnOn) {
     if(service.getCharacteristic(Characteristic.CurrentHeatingCoolingState).value === Characteristic.CurrentHeatingCoolingState.OFF){
       platform.log("START",this.systemStateName(systemToTurnOn), service.displayName, service.getCharacteristic(Characteristic.CurrentTemperature).value);
-      furnaceLog.push({"zone":zone, "run":true, "timestamp":(new Date().toISOString())});
-      platform.updateGPIO(zone, systemToTurnOn, ON);
       service.setCharacteristic(Characteristic.CurrentHeatingCoolingState, systemToTurnOn);
+      platform.updateGPIO(zone, systemToTurnOn, ON);
       this.lastCurrentHeatingCoolingStateChangeTime=new Date();
     } else if (service.getCharacteristic(Characteristic.CurrentHeatingCoolingState).value !== systemToTurnOn) {
       this.turnOffSystem(zone, service, service.getCharacteristic(Characteristic.CurrentHeatingCoolingState).value);
@@ -505,9 +424,8 @@ MultiZonePlatform.prototype.timeSinceLastHeatingCoolingStateChange=function(){
 };
 MultiZonePlatform.prototype.turnOffSystem=function(zone, service, systemToTurnOff){
   platform.log("STOP",platform.currentlyRunning(service) , service.displayName, service.getCharacteristic(Characteristic.CurrentTemperature).value);
-  furnaceLog.push({"zone":zone, "run":false, "timestamp":(new Date().toISOString())});
-  platform.updateGPIO(zone, systemToTurnOff, OFF);
   service.setCharacteristic(Characteristic.CurrentHeatingCoolingState, Characteristic.CurrentHeatingCoolingState.OFF);
+  platform.updateGPIO(zone, Characteristic.CurrentHeatingCoolingState.OFF, OFF);
   this.lastCurrentHeatingCoolingStateChangeTime=new Date();
 };  
 MultiZonePlatform.prototype.updateSystem=function(){
