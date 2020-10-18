@@ -15,7 +15,7 @@ var platform, Accessory, Service, Characteristic, UUIDGen, zones, furnaceLog, se
 
 
 var zones={
-  "Přízemí" : {
+  "1" : {
       "relayPinTopeni" : 12,
       "relayPinKotel" : 18,
       "sensors" : {
@@ -24,7 +24,7 @@ var zones={
         }
       }
   },
-  "Patro" : {
+  "2" : {
       "relayPinTopeni" : 16,
       "relayPinKotel" : 18,
       "sensors" : {
@@ -40,7 +40,7 @@ module.exports = function(homebridge) {
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   UUIDGen = homebridge.hap.uuid;
-  homebridge.registerPlatform("homebridge-multizone-thermostat", "MultiZonePlatform", MultiZonePlatform, true);
+  homebridge.registerPlatform("homebridge-thermo", "MultiZonePlatform", MultiZonePlatform, true);
 };
 function MultiZonePlatform(log, config, api) {
   log("MultiZonePlatform Init");
@@ -238,6 +238,7 @@ MultiZonePlatform.prototype.setTemperature=function(zone, HCState, temp){
 MultiZonePlatform.prototype.startSensorLoops=function(){
   this.sensorInterval=setInterval(
       function(){
+        platform.readTemperatureFromJablotron();
         if(platform.environmentCountdown) {
           platform.environmentCountdown--;
         } else {
@@ -245,6 +246,10 @@ MultiZonePlatform.prototype.startSensorLoops=function(){
         }
       }
       ,this.sensorCheckMilliseconds);
+};
+MultiZonePlatform.prototype.readTemperatureFromJablotron = function() {
+  //platform.updateSensorData('Přízemí', { 'temp' : temperature-1.1111, 'press' : pressure, 'humid' : humidity });
+  platform.updateSensorData('Ložnice', { 'temp' : 22 });
 };
 MultiZonePlatform.prototype.getZoneForDevice=function(deviceid){
   for(var zone in this.zones){
@@ -371,7 +376,7 @@ MultiZonePlatform.prototype.addAccessory = function(accessoryName) {
     service.setCharacteristic(Characteristic.TemperatureDisplayUnits, platform.temperatureDisplayUnits);
     service.setCharacteristic(Characteristic.CurrentHeatingCoolingState, Characteristic.CurrentHeatingCoolingState.OFF);
   }
-  this.api.registerPlatformAccessories("homebridge-multizone-thermostat", "MultiZonePlatform", [accessory]);
+  this.api.registerPlatformAccessories("homebridge-thermo", "MultiZonePlatform", [accessory]);
 };
 MultiZonePlatform.prototype.configureAccessory = function(accessory) {
   platform.log(accessory.displayName,"Configure Accessory");
