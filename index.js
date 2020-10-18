@@ -15,7 +15,7 @@ var platform, Accessory, Service, Characteristic, UUIDGen, zones, furnaceLog, se
 
 
 var zones={
-  "1" : {
+  "Přízemí" : {
       "relayPinTopeni" : 12,
       "relayPinKotel" : 18,
       "sensors" : {
@@ -24,7 +24,7 @@ var zones={
         }
       }
   },
-  "2" : {
+  "Patro" : {
       "relayPinTopeni" : 16,
       "relayPinKotel" : 18,
       "sensors" : {
@@ -133,7 +133,7 @@ MultiZonePlatform.prototype.writeGPIO=function(pin ,val){
 
 MultiZonePlatform.prototype.updateGPIO=function(zone, HeatCoolMode ,val){
   try{
-    platform.log("updateGPIO");
+    platform.log("updateGPIO", zone);
     if(HeatCoolMode==Characteristic.CurrentHeatingCoolingState.OFF){
       if(platform.zones[zone].relayPinTopeni)platform.writeGPIO(platform.zones[zone].relayPinTopeni,RELAY_OFF);
 
@@ -250,7 +250,7 @@ MultiZonePlatform.prototype.startSensorLoops=function(){
 };
 MultiZonePlatform.prototype.readTemperatureFromJablotron = function() {
   platform.updateSensorData('Ložnice', { 'temp' : 22 });
-  platform.updateSensorData('Kuychň', { 'temp' : 22 });
+  platform.updateSensorData('Kuchyň', { 'temp' : 22 });
 };
 MultiZonePlatform.prototype.getZoneForDevice=function(deviceid){
   for(var zone in this.zones){
