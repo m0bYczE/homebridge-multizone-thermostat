@@ -1,6 +1,6 @@
 {
   "name": "homebridge-thermo",
-  "version": "1.0",
+  "version": "1.0.1",
   "description": "A homebridge platform that adds thermostats",
   "main": "index.js",
   "scripts": {
