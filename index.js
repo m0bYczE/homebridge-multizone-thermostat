@@ -80,9 +80,9 @@ function MultiZonePlatform(log, config, api) {
 }
 MultiZonePlatform.prototype.setupGPIO=function() {
   for (var pin in platform.relayPins) {
-    gpio.open(Number(pin), 'output', function() {
-      gpio.write(Number(pin), 1, function() {
-        gpio.close(Number(pin));
+    gpio.open(platform.relayPins[Number(pin)], 'output', function() {
+      gpio.write(platform.relayPins[Number(pin)], 1, function() {
+        gpio.close(platform.relayPins[Number(pin)]);
       });
     });
   }
@@ -103,9 +103,9 @@ MultiZonePlatform.prototype.sendSNSMessage=function(message){
 };
 
 MultiZonePlatform.prototype.writeGPIO=function(pin ,val){
-  gpio.open(pin, 'output', function() {
-    gpio.write(pin, val, function() {
-      gpio.close(pin);
+  gpio.open(platform.relayPins[ Number(pin) - 1 ], 'output', function() {
+    gpio.write(platform.relayPins[ Number(pin) - 1 ], val, function() {
+      gpio.close(platform.relayPins[ Number(pin) - 1 ]);
     });
   });
 };
