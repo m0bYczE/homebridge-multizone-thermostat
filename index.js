@@ -105,7 +105,7 @@ MultiZonePlatform.prototype.setupGPIO=function() {
   try{
       for (var pin in platform.relayPins) {
         platform.log("setup pin", platform.relayPins[Number(pin)], "for relay", Number(pin)+1);
-        gpio.setup(platform.relayPins[Number(pin)], gpio.DIR_HIGH);
+        gpio.setup(platform.relayPins[Number(pin)], gpio.DIR_OUT);
       }
   }
   catch (err) {
