@@ -248,8 +248,8 @@ MultiZonePlatform.prototype.startSensorLoops=function(){
       ,this.sensorCheckMilliseconds);
 };
 MultiZonePlatform.prototype.readTemperatureFromJablotron = function() {
-  //platform.updateSensorData('Přízemí', { 'temp' : temperature-1.1111, 'press' : pressure, 'humid' : humidity });
   platform.updateSensorData('Ložnice', { 'temp' : 22 });
+  platform.updateSensorData('Kuychň', { 'temp' : 22 });
 };
 MultiZonePlatform.prototype.getZoneForDevice=function(deviceid){
   for(var zone in this.zones){
