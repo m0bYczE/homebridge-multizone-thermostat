@@ -77,13 +77,14 @@ function MultiZonePlatform(log, config, api) {
   }
 }
 MultiZonePlatform.prototype.allRelaysOff = function() {
+  platform.log("All relays off!");
   platform.relays.forEach(relay => relay.writeSync(0));
 };
 MultiZonePlatform.prototype.setupGPIO=function() {
   try{
       for (var pin in platform.relayPins) {
         platform.log("setup pin", platform.relayPins[Number(pin)], "for relay", Number(pin)+1);
-        platform.relays[Number(pin)] = new gpio(platform.relayPins[Number(pin)], 'out');
+        platform.relays[pin] = new gpio(platform.relayPins[Number(pin)], 'out');
       }
   }
   catch (err) {
@@ -106,7 +107,7 @@ MultiZonePlatform.prototype.sendSNSMessage=function(message){
 };
 
 MultiZonePlatform.prototype.writeGPIO=function(pin ,val){
-  platform.relays[Number(pin)].writeSync(val);
+  platform.relays[pin].writeSync(val);
 };
 
 MultiZonePlatform.prototype.checkKotel=function(zone){
