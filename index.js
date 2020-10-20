@@ -1,8 +1,9 @@
 'use strict';
 var http = require('http');
-var gpio = require('pi-gpio');
+var gpio = require('onoff').Gpio;
 var fs = require('fs');
 var path = require('path');
+const Jablotron = require('./jablotron');
 
 var OFF = false;
 var ON = true;
@@ -46,7 +47,7 @@ function MultiZonePlatform(log, config, api) {
   this.log = log;
   this.config = config;
   this.accessories = [];
-  this.relays = [];
+  this.relays = {};
   this.relayPins = config.relayPins || [12,16,18]
   this.zones = config.zones || zones;
   this.sensorCheckMilliseconds = config.sensorCheckMilliseconds || 60000;
@@ -57,11 +58,16 @@ function MultiZonePlatform(log, config, api) {
   this.alarmTemp = config.alarmTemp;
   this.alarmKey = config.alarmKey;
   this.alarmSecret = config.alarmSecret;
-  this.alarmTopic = config.alarmTopic; 
+  this.alarmTopic = config.alarmTopic;
+  this.username = config.username;
+  this.password = config.password; 
+  this.jablotronId = config.jablotronId;
   this.reasonableTemperatures = config.reasonableTemperatures || [
     {"units":"celsius", "low":10, "high":40 },
     {"units":"fahrenheit", "low":50, "high":104 }
   ];
+  this.log = platform.getLog();
+  this.jablotron = new Jablotron(this);
   this.setupGPIO();
   if (api) {
       this.api = api;
@@ -71,20 +77,26 @@ function MultiZonePlatform(log, config, api) {
         platform.startControlLoop();      
       }.bind(this));
       this.api.on('shutdown', function() {
-        this.setupGPIO();
+        this.vypnoutGPIO();
       }.bind(this));
   }else{
     platform.startSensorLoops();
     platform.startControlLoop();
   }
 }
+MultiZonePlatform.prototype.getLog = function () {
+      return this.log;
+};
 MultiZonePlatform.prototype.setupGPIO=function() {
   for (var pin in platform.relayPins) {
-    gpio.open(platform.relayPins[Number(pin)], 'output', function() {
-      gpio.write(platform.relayPins[Number(pin)], 1, function() {
-        gpio.close(platform.relayPins[Number(pin)]);
-      });
-    });
+    const relay = new gpio(platform.relayPins[pin], 'out');
+    relay.writeSync(1);
+    platform.relays[platform.relayPins[pin]] = relay;
+  }
+};
+MultiZonePlatform.prototype.vypnoutGPIO=function() {
+  for (var pin in platform.relayPins) {
+    platform.relays[platform.relayPins[pin]].writeSync(1);
   }
 };
 MultiZonePlatform.prototype.sendSNSMessage=function(message){
@@ -103,11 +115,7 @@ MultiZonePlatform.prototype.sendSNSMessage=function(message){
 };
 
 MultiZonePlatform.prototype.writeGPIO=function(pin ,val){
-  gpio.open(platform.relayPins[ Number(pin) - 1 ], 'output', function() {
-    gpio.write(platform.relayPins[ Number(pin) - 1 ], val, function() {
-      gpio.close(platform.relayPins[ Number(pin) - 1 ]);
-    });
-  });
+  platform.relays[pin].writeSync(val);
 };
 
 MultiZonePlatform.prototype.checkKotel=function(zone){
@@ -143,16 +151,20 @@ MultiZonePlatform.prototype.updateGPIO=function(zone, HeatCoolMode ,val){
       if(platform.zones[zone].relayPinTopeni)platform.writeGPIO(platform.zones[zone].relayPinTopeni,val?RELAY_ON:RELAY_OFF);
       if(!val) {
         platform.checkKotel(zone);
+      } else {
+        if(platform.zones[zone].relayPinKotel)platform.writeGPIO(platform.zones[zone].relayPinKotel,val?RELAY_ON:RELAY_OFF);
       }
     }else if(HeatCoolMode==Characteristic.CurrentHeatingCoolingState.COOL){
       platform.log("updateGPIO 3");
       if(platform.zones[zone].relayPinTopeni)platform.writeGPIO(platform.zones[zone].relayPinTopeni,val?RELAY_ON:RELAY_OFF);
       if(!val) {
         platform.checkKotel(zone);
+      } else {
+        if(platform.zones[zone].relayPinKotel)platform.writeGPIO(platform.zones[zone].relayPinKotel,val?RELAY_ON:RELAY_OFF);
       }
     }
 };
-MultiZonePlatform.prototype.startSensorLoops=function(){
+MultiZonePlatform.prototype.startSensorLoops = function(){
   this.sensorInterval=setInterval(
       function(){
         platform.readTemperatureFromJablotron();
@@ -165,8 +177,27 @@ MultiZonePlatform.prototype.startSensorLoops=function(){
       ,this.sensorCheckMilliseconds);
 };
 MultiZonePlatform.prototype.readTemperatureFromJablotron = function() {
-  platform.updateSensorData('Ložnice', { 'temp' : 22 });
-  platform.updateSensorData('Kuchyň', { 'temp' : 22 });
+  for(var zone in this.zones) { 
+    for(var deviceid in this.zones[zone].sensors){
+      var val = this.zones[zone].sensors[deviceid][source];
+      if(val == 'Jablotron') {
+        this.jablotron.getThermomethers(function (callback) {
+          var teplota = 22;
+
+          callback.forEach(function (segment) {
+            let segmentName = segment['segment_name'];
+
+            if (segmentName == deviceid) {
+                teplota = segment['segment_informations'][0]['value'];
+            } else if((deviceid == 'Ložnice' || deviceid == 'Kuchyň') && segmentName == 'Přízemí') {
+                teplota = segment['segment_informations'][0]['value'];
+            }
+          });
+        });
+        platform.updateSensorData(deviceid, { 'temp' : teplota });
+      }
+    }
+  }
 };
 MultiZonePlatform.prototype.getZoneForDevice=function(deviceid){
   for(var zone in this.zones){
@@ -193,7 +224,7 @@ MultiZonePlatform.prototype.updateSensorData = function(deviceid, data){
     for(var j in accessory.services){
 
       var service = accessory.services[j];
-      if(service.displayName==deviceid || service.displayName=="Zone"+zone+" Thermostat")
+      if(service.displayName==deviceid || service.displayName==zone)
       {
         foundAccessories++;
         this.setCharacteristics(service,deviceid,data);
@@ -248,12 +279,12 @@ MultiZonePlatform.prototype.setCharacteristics = function(service,deviceid,data)
       case 'temp':  
         if(this.testCharacteristic(service,Characteristic.CurrentTemperature))
         {
-          if(service.displayName.indexOf("Thermostat")>0){
+          //if(service.displayName.indexOf("Thermostat")>0){
             var zone = this.getZoneForDevice(deviceid);
             service.setCharacteristic(Characteristic.CurrentTemperature,this.getAverageSensor(zone,dataType));
-          }
+          /*}
           else 
-            service.setCharacteristic(Characteristic.CurrentTemperature,Number(data[dataType]));
+            service.setCharacteristic(Characteristic.CurrentTemperature,Number(data[dataType]));*/
         }
         break;
       default:
@@ -265,7 +296,7 @@ MultiZonePlatform.prototype.addAccessoriesForSensor = function(deviceid){
   for(var zone in this.zones){
     var sensor=this.zones[zone].sensors[deviceid];
     if(sensor){
-      this.addAccessory("Zone"+zone+" Thermostat");
+      this.addAccessory(zone);
     }
   }
 };
@@ -297,9 +328,9 @@ MultiZonePlatform.prototype.addAccessory = function(accessoryName) {
 MultiZonePlatform.prototype.configureAccessory = function(accessory) {
   platform.log(accessory.displayName,"Configure Accessory");
       
-  if(accessory.displayName.indexOf('Zone')>=0){
+  //if(accessory.displayName.indexOf('Zone')>=0){
     this.makeThermostat(accessory);
-  }
+  //}
   
   accessory.reachable = true;
   this.accessories.push(accessory);
@@ -341,10 +372,10 @@ MultiZonePlatform.prototype.configurationRequestHandler = function(context, requ
   callback(respDict);
 };
 MultiZonePlatform.prototype.makeThermostat=function(accessory){
-  var zone=accessory.displayName.substr(accessory.displayName.indexOf("Zone")+4,1);
+  var zone=accessory.displayName;
   
   accessory.getService(Service.AccessoryInformation)
-      .setCharacteristic(Characteristic.Manufacturer, "mcmspark")
+      .setCharacteristic(Characteristic.Manufacturer, "Martin Grůza")
       .setCharacteristic(Characteristic.Model, 'Zone Thermostat')
       .setCharacteristic(Characteristic.SerialNumber, '00x000x0000x')
       .setCharacteristic(Characteristic.FirmwareRevision, '1');
@@ -390,7 +421,7 @@ MultiZonePlatform.prototype.getThermostatForZone=function(zone){
   for(var i in this.accessories){
     var accessory=this.accessories[i];
     var service=accessory.getService(Service.Thermostat);
-    if(service && service.displayName=="Zone"+zone+" Thermostat")
+    if(service && service.displayName==zone)
     {
       return service
     }
